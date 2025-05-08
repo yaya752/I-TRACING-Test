@@ -1,4 +1,5 @@
 requests
 certstream
 levenshtein
-os 
+socket
+dotenv
