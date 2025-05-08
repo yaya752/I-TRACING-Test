@@ -12,7 +12,7 @@ As the calidog server is down (issues https://github.com/CaliDog/certstream-pyth
 - [x] The issuing authority: a Let's Encrypt certificate is less likely to be trusted.
 - [x] The domain's AbuseIPDB score Note: the API can only check the score of IPs, but not of domains. You must therefore first resolve the domain(s) in question in order to obtain their score.
 - [x] Implement the BaseClient and AbuseIPDBClient classes so that you can retrieve a one-line reputation score from your hand.
-- [ ] If a domain analysed is suspicious, add a line to a suspicious_domains.log file containing at least the following information
+- [x] If a domain analysed is suspicious, add a line to a suspicious_domains.log file containing at least the following information
 at least the following information:
 1. Criticality level
 2. The domains concerned

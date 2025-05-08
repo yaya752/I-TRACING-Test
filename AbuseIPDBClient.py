@@ -10,6 +10,7 @@ class AbuseIPDBClient(BaseClient):
 	def check_reputation(self, ip: str = None):
 		try:
 			result = self.http_request("GET","check",params={"ipAddress": ip, "maxAgeInDays": 90})
+
 			return result["data"]["abuseConfidenceScore"]
 		except Exception as e:
 			print(f"[ERROR] AbuseIPDB request failed: {e}")

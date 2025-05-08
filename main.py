@@ -6,24 +6,27 @@ import socket
 import os
 from dotenv import load_dotenv
 
-
 # Configuration
+OUR_DOMAIN = "pepito"
 load_dotenv("API.env") 
-OUR_DOMAIN = "google"
-SIMILARITY_THRESHOLD = 0.75
+SIMILARITY_THRESHOLD = 0.80
 API_KEY = os.getenv("ABUSEIPDB_API_KEY")
+
+
 abuse_client = AbuseIPDBClient(api_key=API_KEY)
+
+
+
 '''
 Similarity check function: use levenshtein ratio to check if two domains are similar.
 Returns a float between 0 and 1.
 The closer to 1, the more similar the domains are.
 '''
 def similarity_check(domain1, domain2):
-    """
-    Check if two domains are similar based on Levenshtein ratio.
-    """
+
+    #Check if two domains are similar based on Levenshtein ratio.
+
     ratio = Levenshtein.ratio(domain1, domain2)
-    
     return ratio
 
 '''
@@ -33,7 +36,7 @@ If the domain name cannot be resolved, returns None.
 '''
 def resolve_ip(domain):
     try:
-        return socket.gethostbyname(domain)
+        return socket.gethostbyname(domain.lstrip('*.'))
     except Exception:
         return None
     
@@ -42,17 +45,32 @@ Callback function: this function is called when a new certificate is found.
 It checks if the domain name is similar to OUR_DOMAIN and print domain,IP,issuing auth.
 '''
 def my_callback(message, context): 
-    #print(f"[LOG] {message}") 
+
+    domains_typo = []
     for domain in message['data']['leaf_cert']['all_domains']:
-        domain_is_typo = False
-        # Check if the domain is similar to OUR_DOMAIN
-        domains_split = domain.split('.') + domain.split('-') + domain.split('_')
-        for word in domains_split:
-            if similarity_check(word, OUR_DOMAIN) >= SIMILARITY_THRESHOLD:
-                domain_is_typo = True
-        if domain_is_typo:
-            # Log the suspicious domain
-            print(f"[LOG] Suspicious domain found: Domain : {domain}, IP : {resolve_ip(domain)}, criticity {abuse_client.check_reputation(resolve_ip(domain))}, issuing authority: {message['data']['leaf_cert']['issuer']['aggregated']}")
+        for word in domain.split("."):
+            similarity = similarity_check(word, OUR_DOMAIN)
+            if  similarity >= SIMILARITY_THRESHOLD:
+                domains_typo.append(domain+" ("+str(int(similarity*100))+")")
+                break
+    # Log the suspicious domain
+    if len(domains_typo) > 0:
+        issuing_authority = message['data']['leaf_cert']['issuer']['aggregated']
+        
+        reputation =  abuse_client.check_reputation(resolve_ip(domains_typo[0]))
+        if reputation == -1 :
+            # If the IP address cannot be resolved, log the domain with a warning
+            if (1 + similarity)/2 >= SIMILARITY_THRESHOLD and "Let's Encrypt" in issuing_authority:
+                level = "High"
+            else:
+                level = "Medium"
+        elif reputation >= 50:
+            level = "High"
+        elif reputation >= 20:
+            level = "Medium"
+        else:
+            level =  "Low"
+        Logger().alert(level, domains_typo, issuing_authority)
 
 def on_open():
     print("Connection successfully established!")
