@@ -3,3 +3,4 @@ certstream
 levenshtein
 socket
 dotenv
+dnspython

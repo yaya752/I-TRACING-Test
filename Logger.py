@@ -7,7 +7,10 @@ class Logger(object):
 		self.print_logs = print_logs
 
 	def alert(self ,level: str,domains: str, issuer: str):
-		domain_str = ",".join(domains)
+		domains_string = []
+		for domain in domains:
+			domains_string.append(domain[0] +" (" + domain[1] + ")")
+		domain_str = ", ".join(domains_string)
 		message = f"[{level.upper()}] {domain_str} ({issuer})"
 		with open(LOGFILE, "a") as f:
 			f.write(message + "\n")

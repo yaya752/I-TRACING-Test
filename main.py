@@ -5,11 +5,12 @@ import Levenshtein
 import socket
 import os
 from dotenv import load_dotenv
+import dns.resolver
 
 # Configuration
 OUR_DOMAIN = "pepito"
 load_dotenv("API.env") 
-SIMILARITY_THRESHOLD = 0.80
+SIMILARITY_THRESHOLD = 0.75
 API_KEY = os.getenv("ABUSEIPDB_API_KEY")
 
 
@@ -36,7 +37,8 @@ If the domain name cannot be resolved, returns None.
 '''
 def resolve_ip(domain):
     try:
-        return socket.gethostbyname(domain.lstrip('*.'))
+        answers = dns.resolver.resolve(domain, 'A')
+        return answers[0].address
     except Exception:
         return None
     
@@ -48,21 +50,22 @@ It checks if the domain name is similar to OUR_DOMAIN and print domain,IP,issuin
 def my_callback(message,context): 
     domains_typo = []
     for domain in message['data']['leaf_cert']['all_domains']:
-        for word in domain.split("."):
+        for word in domain.split('.'):
             similarity = similarity_check(word, OUR_DOMAIN)
             if  similarity >= SIMILARITY_THRESHOLD:
-                domains_typo.append(domain+" ("+str(int(similarity*100))+")")
-                break
+                domains_typo.append([domain,str(int(similarity_check(domain, OUR_DOMAIN)*100))])
+            break
+        
     # Log the suspicious domain
     if len(domains_typo) > 0:
         issuing_authority = message['data']['leaf_cert']['issuer']['aggregated']
-        reputation =  abuse_client.check_reputation(resolve_ip(domains_typo[0]))
-          
+        ip = resolve_ip(domains_typo[0][0])
+        reputation = abuse_client.check_reputation(ip)
         if reputation == -1 :
             if (1 + similarity)/2 >= SIMILARITY_THRESHOLD and "Let's Encrypt" in issuing_authority:
-                level = "High"
+                level = "Unknown"
             else:
-                level = "Medium"
+                level = "Low"
         elif reputation >= 50:
             level = "High"
         elif reputation >= 20:
