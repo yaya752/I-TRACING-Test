@@ -44,8 +44,8 @@ def resolve_ip(domain):
 Callback function: this function is called when a new certificate is found.
 It checks if the domain name is similar to OUR_DOMAIN and print domain,IP,issuing auth.
 '''
-def my_callback(message, context): 
 
+def my_callback(message,context): 
     domains_typo = []
     for domain in message['data']['leaf_cert']['all_domains']:
         for word in domain.split("."):
@@ -56,10 +56,9 @@ def my_callback(message, context):
     # Log the suspicious domain
     if len(domains_typo) > 0:
         issuing_authority = message['data']['leaf_cert']['issuer']['aggregated']
-        
         reputation =  abuse_client.check_reputation(resolve_ip(domains_typo[0]))
+          
         if reputation == -1 :
-            # If the IP address cannot be resolved, log the domain with a warning
             if (1 + similarity)/2 >= SIMILARITY_THRESHOLD and "Let's Encrypt" in issuing_authority:
                 level = "High"
             else:
@@ -70,7 +69,7 @@ def my_callback(message, context):
             level = "Medium"
         else:
             level =  "Low"
-        Logger().alert(level, domains_typo, issuing_authority)
+        Logger(print_logs=True).alert(level, domains_typo, issuing_authority)
 
 def on_open():
     print("Connection successfully established!")
